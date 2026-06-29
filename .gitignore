@@ -1,0 +1,10 @@
+# YOLO / SAM weights
+*.pt
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# User environment files
+.vscode/
+.idea/
