@@ -1,0 +1,169 @@
+DAY 1
+
+YOLOv8: used for clear object detection. Computer vision model. 
+from ultralytics import YOLO 
+model = YOLO('yolov8n.pt') 
+results = model('image.jpg')
+Any model of YOLO is alright with our program (Not much of a difference. Other factors are more important)
+It is a highly advanced CNN version. It was trained by using COCO dataset, which has 200,000 images to train with.
+
+OpenCV: This is also used for image detection (We can use yolo and this together for one project) Used to check pixels and find objects. Used for general image processing, not real time object detection.
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+img = cv2.imread('Ganeshji.webp')
+image_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+edges = cv2.Canny(image_rgb, 100, 700)
+fig, axs = plt.subplots(1, 2, figsize=(7, 4))
+axs[0].imshow(image_rgb), axs[0].set_title('Original Image')
+axs[1].imshow(edges), axs[1].set_title('Image Edges')
+for ax in axs:
+    ax.set_xticks([]), ax.set_yticks([])
+plt.tight_layout()
+plt.show()
+This is a powerful tool, not pretrained.
+ 
+Camera Calibration: Used to estimate the physical, optical and positional parameters of a camera lens and image sensor. This is just a process. We usually use tools like ArUco marker or AprilTag.
+
+ArUco: It is a deterministic, rule based computer algorithm vision. Not trained using traditional methods. Square sign with wide black borders, and inner matrix. Preprocessing: The camera feed is converted to a grayscale image and then undergoes thresholding (binarization), turning the image into pure black and white. It detects the edges of the image, and due to tilt of the object, the image usually appears as a trapezium and not a square. It straightens out the shape and makes it a square instead. This is done using perceptive transformation, and the shift is noted down, which detects the tilt in an object. Acts as a spatial anchor for computer vision systems. Similar to a QR code, it allows a camera to instantly recognize an object's location, orientation, and distance in the real world.
+
+AprilTag is similar to arUco tag.  But AprilTags utilize a line-gradient approach based on pixel intensity changes, making them highly resilient to poor lighting. ArUco markers rely on simpler edge detection (contour finding), which requires high contrast to work well
+
+Ok the coding part begins here, for the AprilTag bit:
+
+•	Firstly we need to install OpenCV
+•	Ok so basically since I’m working with AprilTag, I copied a premade git repo into my system, and now I’m on 36h11 which looks somewhat like this, with each tag having a different pattern. 
+•	Tag36h11 means 36 bit code, with hamming distance of 11. Bit code is basically the binary code, and hamming code is the dissimilarity between 2 data. Uses xor gate to compare. There are so many tags being used as trackers, which are used to note different objects. Used mostly for identification purposes. Also do not worry about the red of the image, its not an error, just a git thing.
+•	Now for the actual code part. We import cv2, and then tell the detector to search for 36H11 tags. Then connect to the camera. cap = cv2.VideoCapture(0) We use this function to open camera, and use 0 to open internal device camera.
+•	While the exit button isn’t pressed: Capture frame
+Detect tags , Show result , Repeat , Repeat , Repeat , Repeat... First it checks if the frame is showing a proper picture, and returns true, if not then false.
+•	Then the image is converted to grayscale using gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
+•	Now, all the tags are detected, and stored in the form of a list. Prints all the different tag ids. 
+•	Then it gets the coordinates of all the corners of each tag
+•	We now draw on the webcam frame, and take the x and y coordinates for each corner. We draw green lines connecting each adjacent corner, and creating a box. Then, create a circle of radius 5 for each corner, with the colour red. So, make red dots on each of the corners of each of the tags. 
+•	Now, we calculate the pixel width for the tags, and calculate the scale. Also, we make dots at the centre of each side.
+•	Then, we write information of the tag. We write the tag id, display width, scale.
+•	 cv2.imshow("AprilTag Detector", frame) : Shows the image 
+•	If esc is pressed, exit.
+
+Update:
+	First, we blur the image, after making it black and white. This helps by removing a lot of background noise that isn’t needed. Then, the Canny part finds the boundaries and only leaves the outline. 
+	Finds multiple object boundaries, and gives that number of contours.
+	Makes sure to not take the tag’s contour, as it isn’t necessary 
+	Takes the smallest rectangle, and then returns its centre, width and height, and rotation and converts them to centimetres, and then display the measurements.
+
+DAY 2
+
+
+Ok update. I got the tag printout, and rn its only detecting the tag, and isn’t measuring anything else… maybe because the surroundings had a LOT going on? I’ll try fixing it..
+
+Ok so basically what is happening is that my system is detecting A LOT(Hit around a hundred) contours, and is unable to do anything properly. So… I’m gonna add YOLO to it
+
+Ok so I changed all contours into YOLO tags, and it’s working!!!
+
+CAN DOS:
+ 	Detect objects, and measure out it’s size(IDK how accurate it is yet)
+ 	Classify actual objects, instead of random clusters
+CAN’T DO:
+ 	No perspectives yet, like we can’t detect if the aprilTag and the object is in different perspective.
+
+Ok, im gonna try to make this without the tag.. using depth estimation AI.. This is gonna be on a separate file tho, I wanna keep my og work. Let’s first finish with the perspectives aspect of this… the perspective is done as follows: First I tried using chess board calibration, inputing multiple chessboard images such that there are different angles to see from.
+But, this method was not very effective, so I switched to a different method. Here im using solvePnP to calibrate the camera, to detect at angles better. success, rvec, tvec = cv2.solvePnP(
+object_points,
+image_points,
+camera_matrix,
+dist_coeffs
+)
+This is the code for it.
+
+Camera Frame
+↓
+Detect AprilTag
+↓
+Compute pixels_per_cm
+↓
+Run YOLO
+↓
+Measure YOLO bounding boxes
+↓
+Display dimensions
+
+Works like this. I’ll try taking a picture of the working somehow
+ 
+Ok so its something like this. Not sure how accurate it is, but I’ll try to test it in a place where I have more space. 
+
+
+
+Okay new part time. I’m trying it without the aprilTag, and with using AI. Some research:
+
+Depth Anything v2:  Converts all 2D frames into 3D frames. Monocular depth estimation. Zoe depth and miDaS can also be used for the same purposes. Depth Anything V2 is trained using a highly effective student-teacher knowledge distillation pipeline that combines high-quality synthetic data with massive amounts of unlabeled real-world imagery. 
+Model	Accuracy	Speed	Ease of Use	Best For
+Depth Anything V2	⭐⭐⭐⭐⭐	⭐⭐⭐⭐	⭐⭐⭐⭐⭐	Most projects today
+ZoeDepth	⭐⭐⭐⭐	⭐⭐⭐	⭐⭐⭐	Better metric depth research
+MiDaS	⭐⭐⭐	⭐⭐⭐⭐	⭐⭐⭐⭐	Older baseline
+
+
+Ok so let’s start a new file with Depth Anything V2.
+Done with setting up camera. Same as the other version. Download the ai of Depth Anything V2. Ran into a problem. I’m not rlly sure what’s going on rn, but my camera isnt switching off, and program isn’t working. Lets try restarting
+OK so im back after restarting my laptop …. LOOK:
+ 
+SO COOL! Depth Map!
+	This basically uses Neural Networks to process the depth. Ok, then we convert BGR to RGB as it is the accepted version , which OpenCV can save. It is in the form of a numpy array
+	Then, we convert the numpy array into depth model processable form using PIL(Pillow, which is used for image processing)
+	We then estimate the depth using depth = depth_estimator(pil_image). This is the neural network inference step.
+	Then, we create an entire depth array, which measures how close an object is, for the entire screen.
+	Then we normalize the values, from 0- 255 to make it easier to read(Grayscale values). Make sure all the inputs are integer type.
+	Now make it according to the colormap. The position changes the colour.. Near → yellow, Medium → orange, Far → purple
+	Then we display the depth map.
+
+Ok time to add YOLO into this:
+	Use the same steps as the other model for adding YOLO.
+	 
+	YOLO is detecting the object, and is printing out the percentage of surety. It is 76% sure I’m a person :///
+	Ok so basically till now, my model is switching on the camera, then creates a depth map, showing colour based on how far an object is from the camera. Moving on, let’s finally start with adding the length and width. 
+
+o	Ok so camera Calibration time ^^. We need to do the necessary calculations. We need to get the focal length with the help of the depth map! 
+o	Real Width= (Pixel Width ×Distance)/ Focal Length 
+o	Ok so there are 2 ways in which I can do this. One is camera calibration, and the other is something call Segment Anything. Let’s start with camera calibration
+o	Ok, I did the calculations, take 4 edges, and subtract to find the height and width
+o	Update, the model works, and shows the width and height, but the camera isn’t very nice, so it fluctuates a lot, and is acting strange. it works though, so hey that’s good
+ 
+
+Ok, now to calibrate the camera.
+DAY 3
+
+Ok, so we are gonna calibrate the camera…
+ 
+This is the reference being used(One of them)
+Ok, the camera has been calibrated, now to add it to the code
+Ok, camera calibration code added successfully!
+Next, we are gonna convert pixels to cms…
+
+	Ok so update, the camera has been calibrated. Let us see what to do next!
+	 
+	Rn its working like this, which is pretty good for a system without a reference point
+	This system is working, but the one with the apriltag works much better as it has reference points. That is a point to remember
+	The detector systems which can detect the object accurately without using any reference objects use very fancy(And expensive) cameras. So, we need to settle with this
+	Ooh and as a note if anyone was wondering, I used regular camera calibration and depth-anything here for now…. Will add segment anything soon
+	Ok, so I’m done with the One-time depth calibration
+
+One-time depth calibration: A one-time depth calibration generally refers to an initial, permanent setup or baseline configuration. It ensures that a sensor (like a depth camera, sonar, or laser) accurately calculates distance without needing constant readjustment in the future. 
+
+Addition of SAM(Segment-Anything Model):
+	Ok, so we add SAM finally!
+	SAM gives the actual object outline. Now, measurements are based on actual object pixels, instead of bounding box pixels, hence making it more accurate!
+       ███
+  ███████
+█████████
+█████████
+ ███████
+	Something like this ^^
+	Ok update, SAM code added!
+
+ 
+Looking like this rn…. 
+Veryyy slow…gonna try fixing it
+Ok its still very slow, and im debating removing SAM..
+Update, I tried to fix it, but my program is acting really strange, so im removing SAM…
+ 
+Final product is something like this.
